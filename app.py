@@ -58,15 +58,15 @@ PRESETS = {
     },
     "High risk": {
         "gender": "Male",
-        "age": 72,
+        "age": 78,
         "hypertension": 1,
         "heart_disease": 1,
         "ever_married": "Yes",
-        "work_type": "Self-employed",
+        "work_type": "Private",
         "Residence_type": "Urban",
-        "avg_glucose_level": 210.5,
-        "bmi": 33.0,
-        "smoking_status": "formerly smoked",
+        "avg_glucose_level": 240.0,
+        "bmi": 36.0,
+        "smoking_status": "smokes",
     },
 }
 
