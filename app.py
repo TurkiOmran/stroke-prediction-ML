@@ -42,6 +42,34 @@ FIELD_DEFAULTS = {
     "smoking_status": "never smoked",
 }
 
+# Built-in demo patients — one-click presets for the presentation.
+PRESETS = {
+    "Low risk": {
+        "gender": "Female",
+        "age": 28,
+        "hypertension": 0,
+        "heart_disease": 0,
+        "ever_married": "No",
+        "work_type": "Private",
+        "Residence_type": "Urban",
+        "avg_glucose_level": 85.0,
+        "bmi": 22.0,
+        "smoking_status": "never smoked",
+    },
+    "High risk": {
+        "gender": "Male",
+        "age": 72,
+        "hypertension": 1,
+        "heart_disease": 1,
+        "ever_married": "Yes",
+        "work_type": "Self-employed",
+        "Residence_type": "Urban",
+        "avg_glucose_level": 210.5,
+        "bmi": 33.0,
+        "smoking_status": "formerly smoked",
+    },
+}
+
 
 # --- Model loading (cached so it only runs once per session) ---------------
 
@@ -103,8 +131,17 @@ def _apply_patient(p: dict) -> None:
             st.session_state[k] = v
 
 
-# Sidebar — JSON import + adjustable threshold
+# Sidebar — quick-pick presets, JSON import, adjustable threshold
 with st.sidebar:
+    st.header("Examples")
+    st.caption("One-click patients for the presentation demo.")
+    preset_cols = st.columns(len(PRESETS))
+    for col, (label, patient) in zip(preset_cols, PRESETS.items()):
+        with col:
+            if st.button(label, use_container_width=True, key=f"preset_{label}"):
+                _apply_patient(patient)
+                st.rerun()
+
     st.header("Import patient")
     uploaded = st.file_uploader(
         "Patient JSON",
@@ -141,7 +178,7 @@ with st.sidebar:
         st.code(
             json.dumps(
                 {
-                    "Example patient (high risk)": {
+                    "Example patient": {
                         "gender": "Male",
                         "age": 67,
                         "hypertension": 1,
@@ -152,18 +189,6 @@ with st.sidebar:
                         "avg_glucose_level": 180.5,
                         "bmi": 32.0,
                         "smoking_status": "formerly smoked",
-                    },
-                    "Example patient (low risk)": {
-                        "gender": "Female",
-                        "age": 28,
-                        "hypertension": 0,
-                        "heart_disease": 0,
-                        "ever_married": "No",
-                        "work_type": "Private",
-                        "Residence_type": "Urban",
-                        "avg_glucose_level": 85.0,
-                        "bmi": 22.0,
-                        "smoking_status": "never smoked",
                     },
                 },
                 indent=2,
