@@ -2,6 +2,8 @@
 
 A binary classification project that predicts whether a patient is at risk of stroke, using **AutoGluon TabularPredictor**.
 
+**Live demo:** https://stroke-prediction-ml-ewi5zpm22bn6z9g38rbwky.streamlit.app/
+
 ---
 
 ## Dataset
@@ -147,13 +149,66 @@ AutoGluon also reports these metrics automatically via `predictor.evaluate()` an
 
 ### 9. Success / failure criteria
 
-> _TBD — real-world business outcome (separate from metrics). Examples to consider:_
-> - _Success: X% increase in early identification of high-risk patients vs. intuition baseline._
-> - _Failure: no measurable change in patient outcomes or screening behavior._
+Success and failure are measured on **clinical outcomes**, not on the model's metrics directly.
+
+**Success:** in a 6-month pilot, patients flagged by the tool receive follow-up screening, lifestyle counseling, or preventive treatment at a measurably higher rate than the pre-tool baseline — and the tool catches at-risk patients earlier than clinician intuition alone would have.
+
+**Failure:** patients flagged by the tool show no different follow-up, intervention, or outcome rates than non-flagged patients, OR clinicians override the tool's recommendations on the majority of visits (indicating low trust / poor fit with workflow).
 
 ---
 
 ## Setup and Usage
 
-> _TBD — install dependencies, train the model, run inference._
+### Try the live demo (no install required)
+
+Open the deployed Streamlit app: https://stroke-prediction-ml-ewi5zpm22bn6z9g38rbwky.streamlit.app/
+
+Enter patient details, adjust the decision threshold if you want, and click **Predict**.
+
+### Run the app locally
+
+Requires **Python 3.11** (recommended) and the trained model artifacts under `model/`.
+
+```bash
+# Clone the repo
+git clone https://github.com/TurkiOmran/stroke-prediction-ML.git
+cd stroke-prediction-ML
+
+# Create a virtual environment
+python3.11 -m venv .venv
+source .venv/bin/activate
+
+# Install dependencies
+pip install --upgrade pip
+pip install -r requirements.txt
+
+# Run the Streamlit app
+streamlit run app.py
+```
+
+The app opens at `http://localhost:8501`.
+
+### Re-train the model
+
+Open `Copy_of_ML_Project.ipynb` in Google Colab (or a local Jupyter), upload the dataset CSV, and run all cells. The notebook covers EDA, feature engineering, training with AutoGluon, threshold selection, feature importance, and saving the model. The saved model folder can be downloaded as `autogluon_model.zip` (last cell) and unzipped into `model/`.
+
+### Programmatic inference (without the Streamlit UI)
+
+```python
+from predict import predict_stroke
+
+result = predict_stroke({
+    "gender": "Male",
+    "age": 67,
+    "hypertension": 1,
+    "heart_disease": 0,
+    "ever_married": "Yes",
+    "work_type": "Private",
+    "Residence_type": "Urban",
+    "avg_glucose_level": 180.5,
+    "smoking_status": "formerly smoked",
+    "bmi": 32.0,
+})
+# → {'probability': 0.1433, 'decision': 'FLAG for follow-up', 'threshold': 0.08}
+```
 
