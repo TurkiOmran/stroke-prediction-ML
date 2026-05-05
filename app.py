@@ -11,6 +11,7 @@ Run locally:
 Deployed via Streamlit Community Cloud (or Hugging Face Spaces) — see README.
 """
 
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -26,6 +27,20 @@ MODEL_PATH = Path(__file__).parent / "model"
 # 0.08 → ~60% recall, ~17% of patients flagged.
 # 0.05 → high-sensitivity alternative for "missing a stroke is unacceptable".
 DEFAULT_THRESHOLD = 0.08
+
+# Form-field defaults — also the canonical key set for JSON import.
+FIELD_DEFAULTS = {
+    "gender": "Male",
+    "age": 50,
+    "hypertension": 0,
+    "heart_disease": 0,
+    "ever_married": "Yes",
+    "work_type": "Private",
+    "Residence_type": "Urban",
+    "avg_glucose_level": 100.0,
+    "bmi": 25.0,
+    "smoking_status": "never smoked",
+}
 
 
 # --- Model loading (cached so it only runs once per session) ---------------
@@ -75,8 +90,87 @@ st.divider()
 
 predictor = load_predictor()
 
-# Sidebar — adjustable threshold
+# Seed session-state defaults BEFORE widgets render so JSON import can
+# overwrite them on a subsequent run.
+for _k, _v in FIELD_DEFAULTS.items():
+    st.session_state.setdefault(_k, _v)
+
+
+def _apply_patient(p: dict) -> None:
+    """Copy fields from a patient dict into session_state, ignoring unknown keys."""
+    for k, v in p.items():
+        if k in FIELD_DEFAULTS:
+            st.session_state[k] = v
+
+
+# Sidebar — JSON import + adjustable threshold
 with st.sidebar:
+    st.header("Import patient")
+    uploaded = st.file_uploader(
+        "Patient JSON",
+        type=["json"],
+        help=(
+            "Upload either a single patient dict, or a dict of named "
+            "patients (e.g. `{\"Mr. A\": {...}, \"Ms. B\": {...}}`). "
+            "Recognized keys: " + ", ".join(FIELD_DEFAULTS) + "."
+        ),
+    )
+    if uploaded is not None:
+        try:
+            data = json.load(uploaded)
+        except json.JSONDecodeError as e:
+            st.error(f"Invalid JSON: {e}")
+            data = None
+
+        if isinstance(data, dict) and data:
+            if all(isinstance(v, dict) for v in data.values()):
+                # Dict of named patients
+                choice = st.selectbox("Choose patient", list(data.keys()))
+                if st.button("Load patient", use_container_width=True):
+                    _apply_patient(data[choice])
+                    st.rerun()
+            else:
+                # Single patient dict
+                if st.button("Load patient", use_container_width=True):
+                    _apply_patient(data)
+                    st.rerun()
+        elif data is not None:
+            st.error("JSON must be a non-empty object.")
+
+    with st.expander("JSON format example"):
+        st.code(
+            json.dumps(
+                {
+                    "Example patient (high risk)": {
+                        "gender": "Male",
+                        "age": 67,
+                        "hypertension": 1,
+                        "heart_disease": 0,
+                        "ever_married": "Yes",
+                        "work_type": "Private",
+                        "Residence_type": "Urban",
+                        "avg_glucose_level": 180.5,
+                        "bmi": 32.0,
+                        "smoking_status": "formerly smoked",
+                    },
+                    "Example patient (low risk)": {
+                        "gender": "Female",
+                        "age": 28,
+                        "hypertension": 0,
+                        "heart_disease": 0,
+                        "ever_married": "No",
+                        "work_type": "Private",
+                        "Residence_type": "Urban",
+                        "avg_glucose_level": 85.0,
+                        "bmi": 22.0,
+                        "smoking_status": "never smoked",
+                    },
+                },
+                indent=2,
+            ),
+            language="json",
+        )
+
     st.header("Settings")
     threshold = st.slider(
         "Decision threshold",
@@ -97,43 +191,49 @@ st.subheader("Patient details")
 col1, col2 = st.columns(2)
 
 with col1:
-    gender = st.selectbox("Gender", ["Male", "Female", "Other"])
-    age = st.slider("Age", min_value=0, max_value=100, value=50)
+    gender = st.selectbox("Gender", ["Male", "Female", "Other"], key="gender")
+    age = st.slider("Age", min_value=0, max_value=100, key="age")
     hypertension = st.selectbox(
         "Hypertension",
         options=[0, 1],
         format_func=lambda x: "Yes" if x == 1 else "No",
+        key="hypertension",
     )
     heart_disease = st.selectbox(
         "Heart disease",
         options=[0, 1],
         format_func=lambda x: "Yes" if x == 1 else "No",
+        key="heart_disease",
     )
-    ever_married = st.selectbox("Ever married", ["Yes", "No"])
+    ever_married = st.selectbox("Ever married", ["Yes", "No"], key="ever_married")
 
 with col2:
     work_type = st.selectbox(
         "Work type",
         ["Private", "Self-employed", "Govt_job", "children", "Never_worked"],
+        key="work_type",
     )
-    residence_type = st.selectbox("Residence type", ["Urban", "Rural"])
+    residence_type = st.selectbox(
+        "Residence type", ["Urban", "Rural"], key="Residence_type"
+    )
     avg_glucose_level = st.slider(
         "Average glucose level (mg/dL)",
         min_value=40.0,
         max_value=300.0,
-        value=100.0,
         step=1.0,
+        key="avg_glucose_level",
     )
     bmi = st.slider(
         "BMI",
         min_value=10.0,
         max_value=70.0,
-        value=25.0,
         step=0.1,
+        key="bmi",
     )
     smoking_status = st.selectbox(
         "Smoking status",
         ["never smoked", "formerly smoked", "smokes", "Unknown"],
+        key="smoking_status",
     )
 
 st.divider()
